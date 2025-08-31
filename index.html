@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puzzle + Cửa + Thư PDF</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: rgb(168, 229, 180);
+    text-align: center;
+  }
+
+  .hidden { display: none; }
+
+  /* Puzzle area */
+  #puzzleBoard {
+    display: grid;
+    grid-template-columns: repeat(3, 179px);
+    grid-template-rows: repeat(3, 158px);
+    gap: 2px;
+    margin: 20px auto;
+    width: max-content;
+    background: #0c67ae;
+    padding: 5px;
+  }
+  .slot {
+    width: 179px;
+    height: 158px;
+    border: 1px dashed #ccc;
+  }
+  #pieces {
+    margin-top: 20px;
+  }
+  #pieces img {
+    width: 100px;
+    height: 100px;
+    margin: 5px;
+    cursor: grab;
+  }
+
+  /* Door */
+  .door-frame {
+    position: relative;
+    width: 300px;
+    height: 400px;
+    margin: 50px auto;
+    perspective: 1000px;
+  }
+
+  .door {
+    position: absolute;
+    width: 150px;
+    height: 100%;
+    background-size: cover;       /* Ảnh phủ đầy cánh cửa */
+    background-position: center;  /* Canh giữa ảnh */
+    transform-origin: left center;
+    transition: transform 1s;
+    cursor: pointer;
+    z-index: 2;
+}
+  .room-number {
+    display: inline-block;
+    padding: 5px 12px;       /* Khoảng cách bên trong */
+    border: 2px solid #8B4513; /* Viền nâu */
+    background-color: #F5F5DC; /* Màu nền be */
+    border-radius: 6px;       /* Bo góc */
+    font-weight: bold;        /* Chữ đậm */
+    font-size: 16px;          /* Kích thước chữ */
+    text-align: center;       /* Canh giữa chữ */
+    color: #000;              /* Màu chữ */
+    font-family: Arial, sans-serif;
+}
+  .door {
+    position: absolute;
+    width: 150px;
+    height: 100%;
+    background-size: cover;       /* Ảnh phủ đầy cánh cửa */
+    background-position: center;  /* Canh giữa ảnh */
+    transform-origin: left center;
+    transition: transform 1s;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Cánh cửa trái */
+.door.left {
+    background-image: url('left_door.jpg');  /* đổi sang ảnh của cánh trái */
+}
+
+/* Cánh cửa phải */
+.door.right {
+    left: 150px;
+    transform-origin: right center;
+    background-image: url('right_door.jpg'); /* đổi sang ảnh của cánh phải */
+}
+
+
+
+  .door.open-left {
+    transform: rotateY(-90deg);
+  }
+
+  .door.open-right {
+    transform: rotateY(90deg);
+  }
+
+  /* Letter */
+  .letter {
+    position: absolute;
+    width: 80%;
+    height: 60%;
+    background: white;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    font-weight: bold;
+    text-align: center;
+    z-index: 1;
+    transition: transform 0.5s ease-in-out;
+  }
+
+  .letter.show {
+    transform: translateX(-50%) translateY(-10px) scale(1.05);
+  }
+  
+
+</style>
+</head>
+<body>
+
+<!-- Puzzle -->
+<div id="puzzleSection">
+  <p>GHÉP LẠI HÌNH T CHỤP CHUNG VỚI M NHÉ</p>
+  <div id="puzzleBoard"></div>
+  <div id="pieces"></div>
+</div>
+
+<!-- Door + Letter -->
+<div id="doorSection" class="hidden">
+    <div class ="room-number" >
+        723
+    </div>
+  <div class="door-frame">
+    <div class="door left" onclick="toggleDoor(this)"></div>
+    <div class="door right" onclick="toggleDoor(this)"></div>
+    <div class="letter hidden" id="letter" onclick="openPDF()">BẤM VÀO ĐÂY NHA</div>
+  </div>
+</div>
+
+<script>
+  // ------- PUZZLE -------
+  const puzzleBoard = document.getElementById("puzzleBoard");
+  const piecesDiv = document.getElementById("pieces");
+
+  let totalPieces = 9;
+  let correctCount = 0;
+
+  for (let i=1; i<=totalPieces; i++) {
+    let slot = document.createElement("div");
+    slot.classList.add("slot");
+    slot.dataset.id = i;
+    slot.addEventListener("dragover", e => e.preventDefault());
+    slot.addEventListener("drop", dropPiece);
+    puzzleBoard.appendChild(slot);
+  }
+
+  let order = [1,2,3,4,5,6,7,8,9].sort(() => Math.random()-0.5);
+  order.forEach(num => {
+    let piece = document.createElement("img");
+    piece.src = `${num}.jpg`;
+    piece.draggable = true;
+    piece.dataset.id = num;
+    piece.addEventListener("dragstart", dragPiece);
+    piecesDiv.appendChild(piece);
+  });
+
+  let draggedPiece = null;
+  function dragPiece(e) { draggedPiece = e.target; }
+
+  function dropPiece(e) {
+    if (!draggedPiece) return;
+    if (this.childNodes.length === 0) {
+      this.appendChild(draggedPiece);
+      if (this.dataset.id === draggedPiece.dataset.id) {
+        correctCount++;
+        if (correctCount === totalPieces) {
+          setTimeout(showDoor, 500);
+        }
+      }
+    }
+  }
+
+  // ------- Door -------
+  const doorFrame = document.querySelector('.door-frame');
+  const leftDoor = document.querySelector('.door.left');
+  const rightDoor = document.querySelector('.door.right');
+  const letter = document.getElementById('letter');
+
+  function toggleDoor(door) {
+    door.classList.toggle(door.classList.contains('left') ? 'open-left' : 'open-right');
+    if(leftDoor.classList.contains('open-left') && rightDoor.classList.contains('open-right')) {
+      letter.classList.remove('hidden');
+      letter.classList.add('show');
+    }
+  }
+
+  function openPDF() {
+    window.open('Colorful Pastel Cute Illustrated Thank You Letter A4 Document.pdf', '_blank'); // đổi link PDF ở đây
+  }
+
+  function showDoor() {
+    document.getElementById("puzzleSection").classList.add("hidden");
+    document.getElementById("doorSection").classList.remove("hidden");
+  }
+
+</script>
+</body>
+</html>
